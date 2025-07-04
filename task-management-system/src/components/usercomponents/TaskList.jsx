@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import API from '../../api'
 import { formatDistanceToNow } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
@@ -19,9 +19,10 @@ const statusColorMap = {
 const TaskList = () => {
   const [tasks, setTasks] = useState([])
   const [selectedTask, setSelectedTask] = useState(null)
-  const [initialLoadComplete, setInitialLoadComplete] = useState(false)
+  const [loading, setLoading] = useState(false)
   const user = JSON.parse(localStorage.getItem("user"))
   const navigate = useNavigate()
+  const hasMountedOnce = useRef(false)
 
   const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 
@@ -39,44 +40,48 @@ const TaskList = () => {
     })
   }
 
-  useEffect(() => {
-    const fetchTasks = async () => {
-      if (!isValidEmail(user?.email)) return
-      try {
-        const res = await API.get(`/tasks/user?email=${user.email}`)
-        const colored = res.data.map(task => {
-          const userEntry = task.assignedUsers.find(u => u.email === user.email)
-          return {
-            ...task,
-            userStatus: userEntry?.status || 'Pending',
-            statusColor: statusColorMap[userEntry?.status] || "bg-gray-400",
-            color: cardColors[Math.floor(Math.random() * cardColors.length)],
-            deadline: task.deadline ? new Date(task.deadline) : null
-          }
-        })
-        const updatedTasks = checkDeadlines(colored)
-        setTasks(updatedTasks)
-        setInitialLoadComplete(true)
-      } catch (err) {
-        console.error("Failed to fetch tasks:", err.message)
+  const fetchTasks = async () => {
+    if (!isValidEmail(user?.email)) return
+    if (!hasMountedOnce.current) setLoading(true)
+
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate delay
+      const res = await API.get(`/tasks/user?email=${user.email}`)
+      const colored = res.data.map(task => {
+        const userEntry = task.assignedUsers.find(u => u.email === user.email)
+        return {
+          ...task,
+          userStatus: userEntry?.status || 'Pending',
+          statusColor: statusColorMap[userEntry?.status] || "bg-gray-400",
+          color: cardColors[Math.floor(Math.random() * cardColors.length)],
+          deadline: task.deadline ? new Date(task.deadline) : null
+        }
+      })
+      const updatedTasks = checkDeadlines(colored)
+      setTasks(updatedTasks)
+    } catch (err) {
+      console.error("Failed to fetch tasks:", err.message)
+    } finally {
+      if (!hasMountedOnce.current) {
+        setLoading(false)
+        hasMountedOnce.current = true
       }
     }
+  }
 
-    if (user?.email && !initialLoadComplete) {
-      fetchTasks()
-    }
-  }, [user, initialLoadComplete])
+  useEffect(() => {
+    if (user?.email) fetchTasks()
+  }, [user])
 
   const handleStatusCycle = async (task) => {
     const today = new Date()
     if (task.deadline && task.deadline < today) return
 
-    const currentStatus = task.userStatus
     const nextStatus = {
       "Pending": "In Progress",
       "In Progress": "Completed",
       "Completed": "Pending"
-    }[currentStatus] || "Pending"
+    }[task.userStatus] || "Pending"
 
     try {
       await API.patch(`/tasks/${task._id}/status`, {
@@ -97,28 +102,31 @@ const TaskList = () => {
   }
 
   const formatDate = (date) => {
-    if (!date) return 'No deadline';
-    const options = { day: 'numeric', month: 'short', year: 'numeric' };
-    return new Date(date).toLocaleDateString('en-US', options);
+    if (!date) return 'No deadline'
+    return new Date(date).toLocaleDateString('en-US', {
+      day: 'numeric', month: 'short', year: 'numeric'
+    })
   }
+
+  const SkeletonCard = () => (
+    <div className="relative w-full h-64 bg-gray-200 rounded-2xl shadow-xl animate-pulse sm:mt-0" />
+  )
 
   const cardTasks = tasks.slice(0, 8)
 
   return (
     <>
       <div className="w-full mx-auto py-10 mt-10 flex flex-col items-center max-w-xs sm:max-w-2xl sm:grid sm:grid-cols-2 sm:gap-8 lg:max-w-4xl lg:grid-cols-3" style={{ minHeight: 500 }}>
-        {cardTasks.length === 0 ? (
+        {loading ? (
+          [...Array(6)].map((_, idx) => <SkeletonCard key={idx} />)
+        ) : cardTasks.length === 0 ? (
           <div className="col-span-full text-center text-gray-500 py-10">No tasks found.</div>
         ) : cardTasks.map((task, idx) => (
           <div key={task._id} onClick={() => setSelectedTask(task)}
-            className={`relative w-full cursor-pointer shadow-xl rounded-2xl transition-all duration-300 ${task.color}
-              ${idx !== 0 ? '-mt-16' : ''} hover:scale-105 sm:mt-0 sm:w-full`}
-            style={{
-              zIndex: tasks.length - idx,
-              boxShadow: '0 8px 24px rgba(0,0,0,0.08), 0 1.5px 4px rgba(0,0,0,0.08)'
-            }}
+            className={`relative w-full cursor-pointer shadow-xl rounded-2xl transition-all duration-300 ${task.color} ${idx !== 0 ? '-mt-16' : ''} hover:scale-105 sm:mt-0`}
+            style={{ zIndex: tasks.length - idx }}
           >
-            <div className='flex items-center justify-between px极6 pt-6'>
+            <div className='flex items-center justify-between px-6 pt-6'>
               <h3 className={`${task.statusColor} text-xs px-3 py-1 rounded text-white font-semibold shadow`}>
                 {task.userStatus}
               </h3>
@@ -126,7 +134,7 @@ const TaskList = () => {
             </div>
             <div className="px-6 pb-6">
               <h2 className="mt-4 text-xl font-bold text-gray-800">{task.title}</h2>
-              <p className="text-sm text-gray-极600 mt-2">{task.description}</p>
+              <p className="text-sm text-gray-600 mt-2">{task.description}</p>
               <p className="text-xs font-bold text-gray-500 mt-1">Deadline: {formatDate(task.deadline)}</p>
               <button
                 className={`mt-2 bg-white text-gray-900 font-medium text-xs px-3 py-1 rounded shadow ${
@@ -145,8 +153,8 @@ const TaskList = () => {
           </div>
         ))}
 
-        {tasks.length > 8 && (
-          <div className="bg-white rounded-xl shadow-lg p极5 border border-gray-200 flex flex-col items-center justify-center cursor-pointer hover:bg-blue-50 transition"
+        {!loading && tasks.length > 8 && (
+          <div className="bg-white rounded-xl shadow-lg p-5 border border-gray-200 flex flex-col items-center justify-center cursor-pointer hover:bg-blue-50 transition"
             onClick={() => navigate('/task-list-preview')}>
             <h2 className="text-lg font-semibold text-blue-600">Show All</h2>
             <p className="text-sm text-gray-500 text-center mt-2">View all {tasks.length} tasks in detail</p>

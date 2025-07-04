@@ -1,32 +1,33 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import cardColors from '../../utils/taskColors';
 import statusColorMap from '../../utils/statusColors';
 import API from '../../api';
 
 const TaskCard = ({ tasks, onSelect }) => {
   const user = JSON.parse(localStorage.getItem("user"));
-  const [userDetails, setUserDetails] = useState({});
+  const [loading, setLoading] = useState(false);
+  const hasMountedOnce = useRef(false);
+
+  const SkeletonCard = () => (
+    <div className="relative w-full h-64 bg-gray-200 rounded-2xl shadow-xl animate-pulse sm:mt-0" />
+  );
 
   useEffect(() => {
-    const fetchUserDetails = async () => {
-      try {
-        const res = await API.get('/users/employees');
-        const details = res.data.reduce((acc, user) => {
-          acc[user.email] = { name: user.name, organization: user.organization };
-          return acc;
-        }, {});
-        setUserDetails(details);
-      } catch (err) {
-        console.error("Failed to fetch user details:", err);
-      }
-    };
-
-    fetchUserDetails();
+    if (!hasMountedOnce.current) {
+      setLoading(true);
+      const timer = setTimeout(() => {
+        setLoading(false);
+        hasMountedOnce.current = true;
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
   }, []);
 
   return (
     <div className="grid grid-cols-1 xs:grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 p-2">
-      {tasks.length === 0 ? (
+      {loading ? (
+        [...Array(6)].map((_, idx) => <SkeletonCard key={idx} />)
+      ) : tasks.length === 0 ? (
         <div className="col-span-full text-center text-gray-500 py-10 text-sm sm:text-base">No tasks found.</div>
       ) : tasks.map((task, idx) => {
         const color = cardColors[idx % cardColors.length];
