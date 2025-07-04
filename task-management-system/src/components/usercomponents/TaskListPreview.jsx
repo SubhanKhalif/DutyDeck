@@ -44,7 +44,7 @@ const TaskList = () => {
     }
 
     if (user?.email) fetchTasks()
-  }, [user])
+  }, []) // Removed user from dependencies to prevent auto-refresh
 
   const handleStatusChange = async (taskId, currentStatus) => {
     const nextStatus = {
@@ -54,7 +54,7 @@ const TaskList = () => {
     }[currentStatus] || "Pending"
 
     try {
-      const res = await API.patch(`/tasks/${taskId}/status`, {
+      await API.patch(`/tasks/${taskId}/status`, {
         email: user.email,
         status: nextStatus
       })
@@ -131,7 +131,7 @@ const TaskList = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
           <div className={`relative w-full max-w-md mx-auto rounded-2xl shadow-2xl ${selectedTask.color} p-8 animate-pop`}>
             <button
-              className="absolute top-3 right-3 text-gray-700 text-xl font-bold hover:text-red-600"
+              className="absolute top-3 right-3 text-gray-7 00 text-xl font-bold hover:text-red-600"
               onClick={() => setSelectedTask(null)}
               aria-label="Close"
             >

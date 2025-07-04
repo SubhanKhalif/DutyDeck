@@ -24,28 +24,28 @@ const TaskList = () => {
 
   const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 
-  useEffect(() => {
-    const fetchTasks = async () => {
-      if (!isValidEmail(user?.email)) return
-      try {
-        const res = await API.get(`/tasks/user?email=${user.email}`)
-        const colored = res.data.map(task => {
-          const userEntry = task.assignedUsers.find(u => u.email === user.email)
-          return {
-            ...task,
-            userStatus: userEntry?.status || 'Pending',
-            statusColor: statusColorMap[userEntry?.status] || "bg-gray-400",
-            color: cardColors[Math.floor(Math.random() * cardColors.length)]
-          }
-        })
-        setTasks(colored)
-      } catch (err) {
-        console.error("Failed to fetch tasks:", err.message)
-      }
+  const fetchTasks = async () => {
+    if (!isValidEmail(user?.email)) return
+    try {
+      const res = await API.get(`/tasks/user?email=${user.email}`)
+      const colored = res.data.map(task => {
+        const userEntry = task.assignedUsers.find(u => u.email === user.email)
+        return {
+          ...task,
+          userStatus: userEntry?.status || 'Pending',
+          statusColor: statusColorMap[userEntry?.status] || "bg-gray-400",
+          color: cardColors[Math.floor(Math.random() * cardColors.length)]
+        }
+      })
+      setTasks(colored)
+    } catch (err) {
+      console.error("Failed to fetch tasks:", err.message)
     }
+  }
 
+  useEffect(() => {
     if (user?.email) fetchTasks()
-  }, [user])
+  }, []) // Removed user from dependencies to prevent auto-refresh
 
   const handleStatusCycle = async (task) => {
     const currentStatus = task.userStatus
@@ -133,7 +133,7 @@ const TaskList = () => {
           <div className="bg-white rounded-xl shadow-lg p-5 border border-gray-200 flex flex-col items-center justify-center cursor-pointer hover:bg-blue-50 transition"
             onClick={() => navigate('/task-list-preview')}>
             <h2 className="text-lg font-semibold text-blue-600">Show All</h2>
-            <p className="text-sm text-gray-500 text-center mt-2">View all {tasks.length} tasks in detail</p>
+            <p className="text-sm text-gray-500 text-center mt 2">View all {tasks.length} tasks in detail</p>
           </div>
         )}
       </div>
