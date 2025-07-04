@@ -32,7 +32,7 @@ const Tasknumber = () => {
       }
     };
     fetchStats();
-  }, [user]);
+  }, []); // Removed user from dependencies to prevent auto-refresh
 
   const defaultStats = [
     { count: 0, label: "New task" },

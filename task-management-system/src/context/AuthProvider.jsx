@@ -1,23 +1,10 @@
-import React, { createContext, useEffect, useState } from 'react';
+import React, { createContext, useState, useCallback } from 'react';
 
 export const AuthContext = createContext();
 
 const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);       // 'admin' | 'employee' | null
   const [userName, setUserName] = useState('');
-  const [loading, setLoading] = useState(true); // Wait until localStorage is loaded
-
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'));
-
-    if (token && loggedInUser) {
-      setUser(loggedInUser.role);
-      setUserName(loggedInUser.name || '');
-    }
-
-    setLoading(false);
-  }, []);
 
   const login = async (email, password) => {
     try {
@@ -52,21 +39,21 @@ const AuthProvider = ({ children }) => {
     }
   };
 
-  const saveSession = (role, userObj, token) => {
+  const saveSession = useCallback((role, userObj, token) => {
     setUser(role);
     setUserName(userObj.name || '');
     localStorage.setItem('loggedInUser', JSON.stringify({ role, name: userObj.name, id: userObj._id }));
     localStorage.setItem('token', token);
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setUser(null);
     setUserName('');
     localStorage.removeItem('loggedInUser');
     localStorage.removeItem('token');
-  };
+  }, []);
 
-  const validateRegistration = async (email, password, name, organization) => {
+  const validateRegistration = useCallback(async (email, password, name, organization) => {
     const errors = [];
     if (!email || !email.includes('@')) {
       errors.push('Please enter a valid email address');
@@ -82,9 +69,9 @@ const AuthProvider = ({ children }) => {
     }
 
     return errors;
-  };
+  }, []);
 
-  const registerUser = async (email, password, name, organization) => {
+  const registerUser = useCallback(async (email, password, name, organization) => {
     const validationErrors = await validateRegistration(email, password, name, organization);
     if (validationErrors.length > 0) {
       return { success: false, message: validationErrors.join('. ') };
@@ -111,9 +98,9 @@ const AuthProvider = ({ children }) => {
       console.error('Registration error:', err);
       return { success: false, message: 'Registration failed. Please check your network connection.' };
     }
-  };
+  }, [validateRegistration]);
 
-  const registerAdmin = async (email, password, name, organization) => {
+  const registerAdmin = useCallback(async (email, password, name, organization) => {
     const validationErrors = await validateRegistration(email, password, name, organization);
     if (validationErrors.length > 0) {
       return { success: false, message: validationErrors.join('. ') };
@@ -140,10 +127,17 @@ const AuthProvider = ({ children }) => {
       console.error('Admin registration error:', err);
       return { success: false, message: 'Admin registration failed. Please check your network connection.' };
     }
-  };
+  }, [validateRegistration]);
 
   return (
-    <AuthContext.Provider value={{ user, userName, loading, login, logout, registerUser, registerAdmin }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      userName, 
+      login, 
+      logout, 
+      registerUser, 
+      registerAdmin 
+    }}>
       {children}
     </AuthContext.Provider>
   );

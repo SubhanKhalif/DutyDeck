@@ -19,35 +19,58 @@ const statusColorMap = {
 const TaskList = () => {
   const [tasks, setTasks] = useState([])
   const [selectedTask, setSelectedTask] = useState(null)
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false)
   const user = JSON.parse(localStorage.getItem("user"))
   const navigate = useNavigate()
 
   const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 
-  const fetchTasks = async () => {
-    if (!isValidEmail(user?.email)) return
-    try {
-      const res = await API.get(`/tasks/user?email=${user.email}`)
-      const colored = res.data.map(task => {
-        const userEntry = task.assignedUsers.find(u => u.email === user.email)
+  const checkDeadlines = (tasks) => {
+    const today = new Date()
+    return tasks.map(task => {
+      if (task.deadline && task.deadline < today && task.userStatus !== "Completed") {
         return {
           ...task,
-          userStatus: userEntry?.status || 'Pending',
-          statusColor: statusColorMap[userEntry?.status] || "bg-gray-400",
-          color: cardColors[Math.floor(Math.random() * cardColors.length)]
+          userStatus: "Failed",
+          statusColor: statusColorMap["Failed"]
         }
-      })
-      setTasks(colored)
-    } catch (err) {
-      console.error("Failed to fetch tasks:", err.message)
-    }
+      }
+      return task
+    })
   }
 
   useEffect(() => {
-    if (user?.email) fetchTasks()
-  }, []) // Removed user from dependencies to prevent auto-refresh
+    const fetchTasks = async () => {
+      if (!isValidEmail(user?.email)) return
+      try {
+        const res = await API.get(`/tasks/user?email=${user.email}`)
+        const colored = res.data.map(task => {
+          const userEntry = task.assignedUsers.find(u => u.email === user.email)
+          return {
+            ...task,
+            userStatus: userEntry?.status || 'Pending',
+            statusColor: statusColorMap[userEntry?.status] || "bg-gray-400",
+            color: cardColors[Math.floor(Math.random() * cardColors.length)],
+            deadline: task.deadline ? new Date(task.deadline) : null
+          }
+        })
+        const updatedTasks = checkDeadlines(colored)
+        setTasks(updatedTasks)
+        setInitialLoadComplete(true)
+      } catch (err) {
+        console.error("Failed to fetch tasks:", err.message)
+      }
+    }
+
+    if (user?.email && !initialLoadComplete) {
+      fetchTasks()
+    }
+  }, [user, initialLoadComplete])
 
   const handleStatusCycle = async (task) => {
+    const today = new Date()
+    if (task.deadline && task.deadline < today) return
+
     const currentStatus = task.userStatus
     const nextStatus = {
       "Pending": "In Progress",
@@ -73,6 +96,12 @@ const TaskList = () => {
     }
   }
 
+  const formatDate = (date) => {
+    if (!date) return 'No deadline';
+    const options = { day: 'numeric', month: 'short', year: 'numeric' };
+    return new Date(date).toLocaleDateString('en-US', options);
+  }
+
   const cardTasks = tasks.slice(0, 8)
 
   return (
@@ -80,69 +109,56 @@ const TaskList = () => {
       <div className="w-full mx-auto py-10 mt-10 flex flex-col items-center max-w-xs sm:max-w-2xl sm:grid sm:grid-cols-2 sm:gap-8 lg:max-w-4xl lg:grid-cols-3" style={{ minHeight: 500 }}>
         {cardTasks.length === 0 ? (
           <div className="col-span-full text-center text-gray-500 py-10">No tasks found.</div>
-        ) : cardTasks.map((task, idx) => {
-          const isDeadlinePassed = task.deadline && new Date(task.deadline) < new Date()
-          const isTaskDisabled = task.userStatus === "Failed" || (isDeadlinePassed && task.userStatus !== "Completed")
-          return (
-            <div key={task._id} onClick={() => setSelectedTask(task)}
-              className={`relative w-full cursor-pointer shadow-xl rounded-2xl transition-all duration-300 ${task.color}
-                ${idx !== 0 ? '-mt-16' : ''} hover:scale-105 sm:mt-0 sm:w-full`}
-              style={{
-                zIndex: tasks.length - idx,
-                boxShadow: '0 8px 24px rgba(0,0,0,0.08), 0 1.5px 4px rgba(0,0,0,0.08)'
-              }}
-            >
-              <div className='flex items-center justify-between px-6 pt-6'>
-                <h3 className={`${task.statusColor} text-xs px-3 py-1 rounded text-white font-semibold shadow`}>
-                  {task.userStatus}
-                </h3>
-                <h4 className="text-xs text-gray-600">{new Date(task.date).toLocaleDateString()}</h4>
-              </div>
-              <div className="px-6 pb-6">
-                <h2 className="mt-4 text-xl font-bold text-gray-800">{task.title}</h2>
-                <p className="text-sm text-gray-6 00 mt-2">{task.description}</p>
-                {task.deadline && (
-                  <div className="mt-2">
-                    <p className="text-sm text-gray-700">
-                      Deadline:{' '}
-                      <span className={isDeadlinePassed && task.userStatus !== 'Completed' ? "text-red-600 font-semibold" : ""}>
-                        {new Date(task.deadline).toLocaleDateString()}
-                      </span>
-                    </p>
-                  </div>
-                )}
-                <button
-                  className={`mt-2 bg-white text-gray-900 font-medium text-xs px-3 py-1 rounded shadow ${
-                    isTaskDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'
-                  }`}
-                  onClick={(e) => {
-                    if (isTaskDisabled) return
-                    e.stopPropagation()
-                    handleStatusCycle(task)
-                  }}
-                  disabled={isTaskDisabled}
-                >
-                  Mark as {task.userStatus === "Pending" ? "In Progress" : task.userStatus === "In Progress" ? "Completed" : "Pending"}
-                </button>
-              </div>
+        ) : cardTasks.map((task, idx) => (
+          <div key={task._id} onClick={() => setSelectedTask(task)}
+            className={`relative w-full cursor-pointer shadow-xl rounded-2xl transition-all duration-300 ${task.color}
+              ${idx !== 0 ? '-mt-16' : ''} hover:scale-105 sm:mt-0 sm:w-full`}
+            style={{
+              zIndex: tasks.length - idx,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.08), 0 1.5px 4px rgba(0,0,0,0.08)'
+            }}
+          >
+            <div className='flex items-center justify-between px极6 pt-6'>
+              <h3 className={`${task.statusColor} text-xs px-3 py-1 rounded text-white font-semibold shadow`}>
+                {task.userStatus}
+              </h3>
+              <h4 className="text-xs text-gray-600">{new Date(task.date).toLocaleDateString()}</h4>
             </div>
-          )
-        })}
+            <div className="px-6 pb-6">
+              <h2 className="mt-4 text-xl font-bold text-gray-800">{task.title}</h2>
+              <p className="text-sm text-gray-极600 mt-2">{task.description}</p>
+              <p className="text-xs font-bold text-gray-500 mt-1">Deadline: {formatDate(task.deadline)}</p>
+              <button
+                className={`mt-2 bg-white text-gray-900 font-medium text-xs px-3 py-1 rounded shadow ${
+                  task.deadline && task.deadline < new Date() ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'
+                }`}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (task.deadline && task.deadline < new Date()) return
+                  handleStatusCycle(task)
+                }}
+                disabled={task.deadline && task.deadline < new Date()}
+              >
+                Mark as {task.userStatus === "Pending" ? "In Progress" : task.userStatus === "In Progress" ? "Completed" : "Pending"}
+              </button>
+            </div>
+          </div>
+        ))}
 
         {tasks.length > 8 && (
-          <div className="bg-white rounded-xl shadow-lg p-5 border border-gray-200 flex flex-col items-center justify-center cursor-pointer hover:bg-blue-50 transition"
+          <div className="bg-white rounded-xl shadow-lg p极5 border border-gray-200 flex flex-col items-center justify-center cursor-pointer hover:bg-blue-50 transition"
             onClick={() => navigate('/task-list-preview')}>
             <h2 className="text-lg font-semibold text-blue-600">Show All</h2>
-            <p className="text-sm text-gray-500 text-center mt 2">View all {tasks.length} tasks in detail</p>
+            <p className="text-sm text-gray-500 text-center mt-2">View all {tasks.length} tasks in detail</p>
           </div>
         )}
       </div>
 
-      {/* Query Modal with glassy background */}
+      {/* Query Modal */}
       {selectedTask && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md">
           <div className={`relative w-full max-w-md mx-auto rounded-2xl shadow-2xl ${selectedTask.color} p-8 animate-pop`}>
-            <button onClick={() => setSelectedTask(null)} className="absolute top-3 right-3 text-xl font-bold text-gray-7 00 hover:text-red-600">&times;</button>
+            <button onClick={() => setSelectedTask(null)} className="absolute top-3 right-3 text-xl font-bold text-gray-700 hover:text-red-600">&times;</button>
             <div className="flex items-center gap-3 mb-4">
               <h3 className={`${selectedTask.statusColor} text-xs px-3 py-1 rounded text-white font-semibold shadow`}>
                 {selectedTask.userStatus}
@@ -151,6 +167,7 @@ const TaskList = () => {
             </div>
             <h2 className="text-2xl font-bold text-gray-800 mb-2">{selectedTask.title}</h2>
             <p className="text-base text-gray-700">{selectedTask.description}</p>
+            <p className="text-sm font-bold text-gray-500 mt-1">Deadline: {formatDate(selectedTask.deadline)}</p>
 
             <div className="mt-4 border-t pt-4">
               <h4 className="text-lg font-bold text-gray-800 mb-2">Task Queries</h4>

@@ -24,8 +24,11 @@ const Header = ({ onLogout }) => {
       }
     };
 
-    fetchUserName();
-  }, [loggedInEmail]);
+    // Only fetch if userName is not already set
+    if (!userName) {
+      fetchUserName();
+    }
+  }, []); // Removed loggedInEmail from dependencies to prevent auto-refresh
 
   const handleLogoutClick = () => {
     localStorage.removeItem('token');
