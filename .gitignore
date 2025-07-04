@@ -13,10 +13,10 @@ dist-ssr
 *.local
 
 # Environment files
-server/.env
-task-management-system/.env
-employer-management/.env
-employer-management-backend/.env
+*.env
+.env.*
+!task-management-system/.env
+!server/.env
 
 # Editor directories and files
 .vscode/*
