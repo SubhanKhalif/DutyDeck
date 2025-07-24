@@ -20,7 +20,8 @@ export const createTask = async (req, res) => {
       status: 'Pending',
       seen: false,
       seenAt: null,
-      completedAt: null
+      completedAt: null,
+      submission: null
     }));
 
     const newTask = new Task({
@@ -101,7 +102,8 @@ export const getUserTasks = async (req, res) => {
         userStatus: assigned.status,
         seen: assigned.seen,
         seenAt: assigned.seenAt,
-        completedAt: assigned.completedAt
+        completedAt: assigned.completedAt,
+        submission: assigned.submission // Add submission field
       };
     });
 
@@ -145,6 +147,7 @@ export const getTaskStats = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
 // ✅ Get User Insights
 export const getUserInsights = async (req, res) => {
   try {
@@ -190,6 +193,7 @@ export const getUserInsights = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
 // GET /tasks/mentor-user-insights
 export const getMentorUserInsights = async (req, res) => {
   try {
@@ -247,10 +251,10 @@ export const getMentorUserInsights = async (req, res) => {
 };
 
 // ✅ Update Task Status (Per User)
-export const updateTaskStatus = async (req, res) => {
+export const completeTask = async (req, res) => {
   try {
     const { taskId } = req.params;
-    const { email, status, seen } = req.body;
+    const { email, status, seen, submission } = req.body;
 
     if (!['Pending', 'In Progress', 'Completed', 'Failed'].includes(status)) {
       return res.status(400).json({ message: "Invalid status value" });
@@ -272,6 +276,9 @@ export const updateTaskStatus = async (req, res) => {
     user.status = status;
     if (status === 'Completed') {
       user.completedAt = new Date();
+      if (submission) {
+        user.submission = submission;
+      }
     } else if (status === 'Failed') {
       user.completedAt = null;
     }

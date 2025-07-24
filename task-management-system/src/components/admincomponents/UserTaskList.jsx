@@ -41,6 +41,15 @@ const UserTaskList = () => {
     });
   };
 
+  const isUrl = (text) => {
+    try {
+      new URL(text);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto p-2 sm:p-4 md:p-6">
       <h2 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4 text-gray-800 break-words">
@@ -58,9 +67,27 @@ const UserTaskList = () => {
               <p className="text-[10px] sm:text-xs text-gray-500 mt-1">Status: {task.userStatus}</p>
               <div className="mt-2 space-y-1">
                 {task.userStatus === 'Completed' && (
-                  <p className="text-[10px] sm:text-xs text-gray-500 break-words">
-                    Completed: {formatDateTime(task.completedAt)}
-                  </p>
+                  <>
+                    <p className="text-[10px] sm:text-xs text-gray-500 break-words">
+                      Completed: {formatDateTime(task.completedAt)}
+                    </p>
+                    {task.submission && (
+                      <p className="text-[10px] sm:text-xs text-gray-500 break-words">
+                        Submission: {isUrl(task.submission) ? (
+                          <a 
+                            href={task.submission} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800 underline"
+                          >
+                            {task.submission}
+                          </a>
+                        ) : (
+                          <span>{task.submission}</span>
+                        )}
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             </div>

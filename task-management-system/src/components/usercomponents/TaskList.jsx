@@ -20,6 +20,9 @@ const TaskList = () => {
   const [tasks, setTasks] = useState([])
   const [selectedTask, setSelectedTask] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [showSubmitModal, setShowSubmitModal] = useState(false)
+  const [submitContent, setSubmitContent] = useState("")
+  const [taskToSubmit, setTaskToSubmit] = useState(null)
   const user = JSON.parse(localStorage.getItem("user"))
   const navigate = useNavigate()
   const hasMountedOnce = useRef(false)
@@ -73,6 +76,31 @@ const TaskList = () => {
     if (user?.email) fetchTasks()
   }, [user])
 
+  const updateTaskStatus = async (task, status, submission = "") => {
+    try {
+      await API.patch(`/tasks/${task._id}/status`, {
+        email: user.email,
+        status,
+        submission
+      })
+
+      setTasks(prev =>
+        prev.map(t =>
+          t._id === task._id ? {
+            ...t,
+            userStatus: status,
+            statusColor: statusColorMap[status]
+          } : t
+        )
+      )
+      setShowSubmitModal(false)
+      setSubmitContent("")
+      setTaskToSubmit(null)
+    } catch (err) {
+      console.error("Failed to update status:", err.message)
+    }
+  }
+
   const handleStatusCycle = async (task) => {
     const today = new Date()
     if (task.deadline && task.deadline < today) return
@@ -83,22 +111,13 @@ const TaskList = () => {
       "Completed": "Pending"
     }[task.userStatus] || "Pending"
 
-    try {
-      await API.patch(`/tasks/${task._id}/status`, {
-        email: user.email,
-        status: nextStatus
-      })
-
-      setTasks(prev => prev.map(t =>
-        t._id === task._id ? {
-          ...t,
-          userStatus: nextStatus,
-          statusColor: statusColorMap[nextStatus]
-        } : t
-      ))
-    } catch (err) {
-      console.error("Failed to update status:", err.message)
+    if (task.userStatus === "In Progress" && nextStatus === "Completed") {
+      setTaskToSubmit(task)
+      setShowSubmitModal(true)
+      return
     }
+
+    await updateTaskStatus(task, nextStatus)
   }
 
   const formatDate = (date) => {
@@ -116,6 +135,7 @@ const TaskList = () => {
 
   return (
     <>
+      {/* === Task Cards === */}
       <div className="w-full mx-auto py-10 mt-10 flex flex-col items-center max-w-xs sm:max-w-2xl sm:grid sm:grid-cols-2 sm:gap-8 lg:max-w-4xl lg:grid-cols-3" style={{ minHeight: 500 }}>
         {loading ? (
           [...Array(6)].map((_, idx) => <SkeletonCard key={idx} />)
@@ -162,7 +182,7 @@ const TaskList = () => {
         )}
       </div>
 
-      {/* Query Modal */}
+      {/* === Task Details Modal === */}
       {selectedTask && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md">
           <div className={`relative w-full max-w-md mx-auto rounded-2xl shadow-2xl ${selectedTask.color} p-8 animate-pop`}>
@@ -176,10 +196,13 @@ const TaskList = () => {
             <h2 className="text-2xl font-bold text-gray-800 mb-2">{selectedTask.title}</h2>
             <p className="text-base text-gray-700">{selectedTask.description}</p>
             <p className="text-sm font-bold text-gray-500 mt-1">Deadline: {formatDate(selectedTask.deadline)}</p>
+            {selectedTask.submission && (
+              <p className="mt-2 text-sm text-gray-700"><strong>Submission:</strong> {selectedTask.submission}</p>
+            )}
 
+            {/* Task Queries */}
             <div className="mt-4 border-t pt-4">
               <h4 className="text-lg font-bold text-gray-800 mb-2">Task Queries</h4>
-
               <form onSubmit={async (e) => {
                 e.preventDefault()
                 const message = e.target.query.value.trim()
@@ -223,6 +246,44 @@ const TaskList = () => {
                   </li>
                 ))}
               </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* === Submit Task Modal === */}
+      {showSubmitModal && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
+            <h2 className="text-lg font-semibold mb-2 text-gray-800">Submit Task</h2>
+            <p className="text-sm text-gray-500 mb-4">Please describe or paste your task submission result.</p>
+            <textarea
+              rows="4"
+              value={submitContent}
+              onChange={(e) => setSubmitContent(e.target.value)}
+              placeholder="E.g., link to document, result, summary..."
+              className="w-full p-2 border rounded mb-4 text-sm"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setShowSubmitModal(false)
+                  setSubmitContent("")
+                  setTaskToSubmit(null)
+                }}
+                className="text-gray-600 text-sm hover:underline"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (!submitContent.trim()) return
+                  updateTaskStatus(taskToSubmit, "Completed", submitContent.trim())
+                }}
+                className="bg-blue-600 text-white px-4 py-1 rounded text-sm"
+              >
+                Submit & Complete
+              </button>
             </div>
           </div>
         </div>

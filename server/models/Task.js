@@ -15,7 +15,8 @@ const taskSchema = new mongoose.Schema({
       },
       seen: { type: Boolean, default: false },
       seenAt: { type: Date },
-      completedAt: { type: Date }
+      completedAt: { type: Date },
+      submission: { type: String } // ✅ add this field
     }
   ],
 

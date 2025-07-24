@@ -1,52 +1,53 @@
-import express from "express";
-import mongoose from "mongoose";
-import dotenv from "dotenv";
-import cors from "cors";
+import path from 'path';
+import express from 'express';
+import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+import cors from 'cors';
+import { fileURLToPath } from 'url';
+import authRoutes from './routes/authRoutes.js';
+import taskRoutes from './routes/taskRoutes.js';
+import userRoutes from './routes/userRoutes.js';
 
-import authRoutes from "./routes/authRoutes.js";
-import taskRoutes from "./routes/taskRoutes.js";
-import userRoutes from "./routes/userRoutes.js";
+// Get __dirname equivalent in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
 const app = express();
 
-// CORS Configuration to allow both Vercel frontend and local development
-const corsOptions = {
-  origin: ['https://duty-deck.vercel.app', 'http://localhost:5173', 'https://techspotinfotech.com'], // allow both production and development domains
-  methods: ['GET', 'POST', 'PUT', 'PATCH' ,'DELETE', 'OPTIONS'],
-  credentials: true, // allow cookies or Authorization headers
-};
-
-app.use(cors(corsOptions));
-
-// Optional: Manually set headers (for extra safety with some platforms)
-app.use((req, res, next) => {
-  const allowedOrigins = ['https://duty-deck.vercel.app', 'http://localhost:5173', 'https://techspotinfotech.com'];
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.header("Access-Control-Allow-Origin", origin);
-  }
-  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
-  res.header("Access-Control-Allow-Credentials", "true");
-  next();
-});
+// CORS Configuration
+app.use(cors({
+  origin: ['https://duty-deck.vercel.app', 'http://localhost:5173', 'https://techspotinfotech.com'],
+  credentials: true
+}));
 
 // JSON parsing middleware
 app.use(express.json());
 
-//  Routes
-app.use("/api/auth", authRoutes);
-app.use("/api/tasks", taskRoutes);
-app.use("/api/users", userRoutes);
+// Serve React build
+app.use(express.static(path.join(__dirname, 'client/dist')));
 
-//Start server after DB connection
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/tasks', taskRoutes);
+app.use('/api/users', userRoutes);
+
+// Serve React router paths
+app.get('/*splat', (req, res) => {
+  res.sendFile(path.join(__dirname, 'client/dist', '/index.html'));
+});
+
+// 404 for non-API/missing paths
+app.all('/*splat', (req, res) => {
+  res.status(404).json({ message: `Route ${req.originalUrl} not found` });
+});
+
+// MongoDB + Server start
 const PORT = process.env.PORT || 5000;
-
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
+mongoose.connect(process.env.MONGO_URI, { 
+  useNewUrlParser: true, 
+  useUnifiedTopology: true 
 })
   .then(() => app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`)))
-  .catch((err) => console.error("❌ MongoDB connection failed:", err.message));
+  .catch(err => console.error('❌ MongoDB connection failed:', err.message));

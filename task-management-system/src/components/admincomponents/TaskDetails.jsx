@@ -32,6 +32,15 @@ const TaskDetails = ({ task, onEditToggle, onClose }) => {
     return nameMatch || emailMatch;
   });
 
+  const isUrl = (text) => {
+    try {
+      new URL(text);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   return (
     <>
       <button onClick={onClose} className="absolute top-3 right-4 text-gray-700 text-xl font-bold hover:text-red-600">&times;</button>
@@ -80,7 +89,7 @@ const TaskDetails = ({ task, onEditToggle, onClose }) => {
                  backdropFilter: 'blur(12px)',
                  WebkitBackdropFilter: 'blur(12px)'
                }}>
-            <div className="bg-white rounded-xl w-full max-w-md md:max-w-lg lg:max-w-2xl p-4 sm:p-6 md:p-8 shadow-2xl relative max-h-[85vh] overflow-y-auto">
+            <div className="bg-white rounded-xl w-full max-w-3xl p-6 shadow-2xl relative max-h-[85vh] overflow-y-auto">
               {/* Header */}
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-bold text-gray-800">Assigned Users</h3>
@@ -100,35 +109,56 @@ const TaskDetails = ({ task, onEditToggle, onClose }) => {
                   placeholder="Search by name or email..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm md:text-base"
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
                 />
               </div>
 
               {/* User List */}
-              <div className="max-h-[55vh] overflow-y-auto pr-1">
-                <ul className="space-y-2">
-                  {filteredUsers?.length > 0 ? (
-                    filteredUsers.map((u, i) => (
-                      <li key={i} className="flex flex-col bg-gray-50 p-3 rounded-lg shadow-sm">
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-800 font-medium text-sm md:text-base">
-                            {userDetails[u.email]?.name || 'N/A'}
-                          </span>
-                          <span className={`px-2 py-0.5 rounded-full text-xs text-white ${statusColorMap[u.status]}`}>
-                            {u.status}
-                          </span>
-                        </div>
-                        <div className="text-sm text-gray-600 mt-1 break-all">
-                          <p>Email: {u.email}</p>
-                          <p>Organization: {userDetails[u.email]?.organization || 'N/A'}</p>
-                        </div>
-                      </li>
-                    ))
-                  ) : (
-                    <li className="text-center text-gray-500 py-2 text-sm md:text-base">No users found</li>
-                  )}
-                </ul>
-              </div>
+              <ul className="space-y-3">
+  ` {filteredUsers?.length > 0 ? (
+    filteredUsers.map((u, i) => (
+      <li key={i} className="flex flex-col md:flex-row md:items-center justify-between bg-gray-50 p-4 rounded-lg shadow-sm hover:shadow transition duration-200">
+        
+        {/* Left Section */}
+        <div className="w-full md:w-1/3">
+          <p className="font-semibold text-gray-800 text-sm md:text-base">{userDetails[u.email]?.name || 'N/A'}</p>
+          <p className="text-xs text-gray-600 break-all">Email: {u.email}</p>
+          <p className="text-xs text-gray-600">Org: {userDetails[u.email]?.organization || 'N/A'}</p>
+        </div>
+
+        {/* Submission Section */}
+        <div className="w-full md:w-1/3 mt-2 md:mt-0 text-sm text-gray-700 break-words text-left md:text-center">
+          {u.submission ? (
+            isUrl(u.submission) ? (
+              <a
+                href={u.submission}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 underline hover:text-blue-800 break-all"
+              >
+                {u.submission}
+              </a>
+            ) : (
+              <span className="text-gray-700 break-all">{u.submission}</span>
+            )
+          ) : (
+            <span className="text-gray-400 italic">No submission</span>
+          )}
+        </div>
+
+        {/* Status Section */}
+        <div className="w-full md:w-1/3 mt-3 md:mt-0 flex md:justify-end">
+          <span className={`px-3 py-1 rounded-full text-xs font-semibold text-white ${statusColorMap[u.status]}`}>
+            {u.status}
+          </span>
+        </div>
+      </li>
+    ))
+  ) : (
+    <li className="text-center text-gray-500 py-2 text-sm">No users found</li>
+  )}
+</ul>
+
             </div>
           </div>
         )}

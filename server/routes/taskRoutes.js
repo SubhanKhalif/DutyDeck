@@ -7,7 +7,7 @@ import {
   getUserInsights,
   addQueryToTask,
   deleteQuery,
-  updateTaskStatus,
+  completeTask,
   updateTask,
   deleteTask,
   getUserTasks,
@@ -38,7 +38,7 @@ router.get('/user-insights', getUserInsights);
 router.get('/mentor-user-insights', getMentorUserInsights);
 
 // 🔹 Update a specific user's task status (Pending, In Progress, Completed, Failed)
-router.patch('/:taskId/status', updateTaskStatus);
+router.patch('/:taskId/status', completeTask);
 
 // 🔹 Update the entire task (admin use - edit title, desc, deadline etc)
 router.put('/:taskId', updateTask);

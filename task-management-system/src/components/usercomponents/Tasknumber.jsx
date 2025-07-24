@@ -23,6 +23,7 @@ const Tasknumber = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
+        // Add a 1000ms delay before fetching
         await new Promise(resolve => setTimeout(resolve, 2000));
         const res = await API.get('/tasks/stats', {
           params: user.role === 'admin' ? {} : { email: user.email },
