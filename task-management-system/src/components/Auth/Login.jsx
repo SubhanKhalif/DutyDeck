@@ -21,7 +21,7 @@ export default function Login() {
       
       // Redirect based on role
       if (res.data.role === "admin") {
-        navigate("/assi-nabbe-pure-so");
+        navigate("/admin");
       } else if (res.data.role === "mentor") {
         navigate("/mentor");
       } else {
