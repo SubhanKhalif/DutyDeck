@@ -20,10 +20,10 @@ export default function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register-user" element={<RegisterUser />} />
-        <Route path="/register-admin" element={<RegisterAdmin />} />
-        <Route path="/register-" element={<RegisterMentor />} />
+        <Route path="/register-akka-dbakkad-banbe-bo" element={<RegisterAdmin />} />
+        <Route path="/register-mentor" element={<RegisterMentor />} />
         <Route path="/user" element={<DashboardUser />} />
-        <Route path="/admin" element={<DashboardAdmin />} />
+        <Route path="/assi-nabbe-pure-so" element={<DashboardAdmin />} />
         <Route path="/mentor" element={<DashboardMentor />} />
         <Route path="/all-tasks-preview" element={<AllTaskPreview />} />
         <Route path="/task-list-preview" element={<TaskListPreview />} />
