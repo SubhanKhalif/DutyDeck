@@ -20,7 +20,7 @@ export default function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register-user" element={<RegisterUser />} />
-        <Route path="/register-admin" element={<RegisterAdmin />} />
+        <Route path="/register-2226376287397913979128978368216893823" element={<RegisterAdmin />} />
         <Route path="/register-mentor" element={<RegisterMentor />} />
         <Route path="/user" element={<DashboardUser />} />
         <Route path="/admin" element={<DashboardAdmin />} />
