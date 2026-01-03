@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+
+body {
+  background: #1111;
+}
+#tasklist::-webkit-scrollbar {
+    display: none; /* Hide scrollbar for Chrome, Safari and Opera */
+}
