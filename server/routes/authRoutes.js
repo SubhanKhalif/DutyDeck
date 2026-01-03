@@ -1,7 +1,13 @@
 import express from "express";
 import {
+  sendUserRegistrationOtp,
+  verifyUserRegistrationOtp,
   registerUser,
+  sendAdminRegistrationOtp,
+  verifyAdminRegistrationOtp,
   registerAdmin,
+  sendMentorRegistrationOtp,
+  verifyMentorRegistrationOtp,
   registerMentor,
   login,
   forgotPassword,
@@ -11,13 +17,19 @@ import {
 
 const router = express.Router();
 
-// User registration (no OTP)
+// User registration routes with OTP verification
+router.post("/send-user-otp", sendUserRegistrationOtp);
+router.post("/verify-user-otp", verifyUserRegistrationOtp);
 router.post("/register-user", registerUser);
 
-// Admin registration (no OTP)
+// Admin registration routes with OTP verification
+router.post("/send-admin-otp", sendAdminRegistrationOtp);
+router.post("/verify-admin-otp", verifyAdminRegistrationOtp);
 router.post("/register-admin", registerAdmin);
 
-// Mentor registration (no OTP)
+// Mentor registration routes with OTP verification
+router.post("/send-mentor-otp", sendMentorRegistrationOtp);
+router.post("/verify-mentor-otp", verifyMentorRegistrationOtp);
 router.post("/register-mentor", registerMentor);
 
 // Authentication routes
